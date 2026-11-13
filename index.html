@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0">
+
+  <title>河川VR教材</title>
+
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+  </script>
+
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+
+    body {
+
+      margin: 0;
+
+      font-family:
+        "Yu Gothic",
+        "Hiragino Kaku Gothic ProN",
+        sans-serif;
+
+      background: #f4f8fb;
+
+      text-align: center;
+
+    }
+
+
+    /* 上部タイトル */
+
+    .header {
+
+      padding: 18px 15px 12px;
+
+      background: white;
+
+    }
+
+
+    h1 {
+
+      margin: 0 0 8px;
+
+      font-size: 30px;
+
+    }
+
+
+    .instruction {
+
+      margin: 0;
+
+      font-size: 18px;
+
+      font-weight: bold;
+
+      color: #333;
+
+    }
+
+
+    /* 地図 */
+
+    #map {
+
+      width: 100%;
+
+      height: calc(100vh - 105px);
+
+      min-height: 500px;
+
+    }
+
+
+    /* 番号マーカー */
+
+    .point-marker {
+
+      width: 46px;
+
+      height: 46px;
+
+      border-radius: 50%;
+
+      display: flex;
+
+      justify-content: center;
+
+      align-items: center;
+
+      background: #e74c3c;
+
+      color: white;
+
+      border: 4px solid white;
+
+      font-size: 21px;
+
+      font-weight: bold;
+
+      box-shadow:
+        0 3px 8px rgba(0,0,0,0.4);
+
+    }
+
+
+    /* 吹き出し */
+
+    .leaflet-popup-content {
+
+      text-align: center;
+
+      font-size: 16px;
+
+      line-height: 1.6;
+
+      min-width: 150px;
+
+    }
+
+
+    .watch-button {
+
+      display: inline-block;
+
+      margin-top: 7px;
+
+      padding: 9px 15px;
+
+      border-radius: 9px;
+
+      background: #2471a3;
+
+      color: white !important;
+
+      text-decoration: none;
+
+      font-weight: bold;
+
+    }
+
+
+    .watch-button:hover {
+
+      background: #1a5276;
+
+    }
+
+
+    @media (max-width: 700px) {
+
+      h1 {
+
+        font-size: 24px;
+
+      }
+
+
+      .instruction {
+
+        font-size: 15px;
+
+      }
+
+
+      #map {
+
+        height: calc(100vh - 92px);
+
+      }
+
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+
+  <div class="header">
+
+    <h1>
+      多摩川VR教材
+    </h1>
+
+    <p class="instruction">
+      地図上の①～⑥をクリックして、
+      それぞれの地点の様子を観察しよう
+    </p>
+
+  </div>
+
+
+  <div id="map"></div>
+
+
+  <script>
+
+
+    /* =============================
+       地図を作る
+       ============================= */
+
+    const map =
+      L.map("map");
+
+
+    /* =============================
+       国土地理院の標準地図
+       ============================= */
+
+    L.tileLayer(
+
+      "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
+
+      {
+
+        maxZoom: 18,
+
+        attribution:
+          '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>'
+
+      }
+
+    ).addTo(map);
+
+
+
+    /* =============================
+       地点データ
+       ============================= */
+
+    const points = [
+
+      {
+
+        number: 1,
+
+        name: "御嶽渓谷",
+
+        lat: 35.801498,
+
+        lng: 139.1823532
+
+      },
+
+
+      {
+
+        number: 2,
+
+        name: "秋川渓谷",
+
+        lat: 35.7265429,
+
+        lng: 139.1898263
+
+      },
+
+
+      {
+
+        number: 3,
+
+        name: "釜の淵公園",
+
+        lat: 35.7857539,
+
+        lng: 139.2555106
+
+      },
+
+
+      {
+
+        number: 4,
+
+        name: "多摩川・秋川合流点",
+
+        lat: 35.7124,
+
+        lng: 139.3320
+
+      },
+
+
+      {
+
+        number: 5,
+
+        name: "丸子橋",
+
+        lat: 35.584815,
+
+        lng: 139.667824
+
+      },
+
+
+      {
+
+        number: 6,
+
+        name: "多摩川スカイブリッジ",
+
+        lat: 35.54183,
+
+        lng: 139.76189
+
+      }
+
+    ];
+
+
+
+    /* =============================
+       地点を地図に配置
+       ============================= */
+
+    const bounds = [];
+
+
+    points.forEach(point => {
+
+
+      const icon =
+        L.divIcon({
+
+          className: "",
+
+          html:
+            `<div class="point-marker">
+              ${point.number}
+            </div>`,
+
+          iconSize: [46, 46],
+
+          iconAnchor: [23, 23]
+
+        });
+
+
+      const marker =
+        L.marker(
+
+          [point.lat, point.lng],
+
+          { icon: icon }
+
+        ).addTo(map);
+
+
+      marker.bindPopup(
+
+        `
+
+        <strong>
+          地点${point.number}
+        </strong>
+
+        <br>
+
+        ${point.name}
+
+        <br>
+
+        <a
+          class="watch-button"
+          href="viewer.html?point=${point.number}">
+          VR動画を見る
+        </a>
+
+        `
+
+      );
+
+
+      bounds.push(
+        [point.lat, point.lng]
+      );
+
+
+    });
+
+
+
+    /* =============================
+       ①～⑥が全部入る範囲を表示
+       ============================= */
+
+    map.fitBounds(
+
+      bounds,
+
+      {
+
+        padding: [50, 50]
+
+      }
+
+    );
+
+
+  </script>
+
+
+</body>
+
+</html>
