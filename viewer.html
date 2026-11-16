@@ -7,15 +7,144 @@
 
   <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
 
-  <style>
-    * { box-sizing: border-box; }
+  <script>
+    /*
+      タッチ端末用の補助操作。
+      A-Frame のジャイロ追従はカメラ側に残し、
+      指ドラッグ分だけ親の cameraRig を回転させる。
+      これにより上下・左右の指操作と端末追従を併用する。
+    */
+    AFRAME.registerComponent("touch-drag-look", {
+      schema: {
+        sensitivity: { type: "number", default: 0.16 },
+        maxPitch: { type: "number", default: 80 }
+      },
 
-    html, body {
+      init: function () {
+        this.dragging = false;
+        this.lastX = 0;
+        this.lastY = 0;
+        this.pitch = 0;
+        this.yaw = 0;
+
+        this.onTouchStart = this.onTouchStart.bind(this);
+        this.onTouchMove = this.onTouchMove.bind(this);
+        this.onTouchEnd = this.onTouchEnd.bind(this);
+        this.attachListeners = this.attachListeners.bind(this);
+
+        if (this.el.sceneEl && this.el.sceneEl.canvas) {
+          this.attachListeners();
+        } else if (this.el.sceneEl) {
+          this.el.sceneEl.addEventListener(
+            "render-target-loaded",
+            this.attachListeners,
+            { once: true }
+          );
+        }
+      },
+
+      attachListeners: function () {
+        const canvas = this.el.sceneEl && this.el.sceneEl.canvas;
+        if (!canvas) return;
+
+        this.canvas = canvas;
+
+        canvas.style.touchAction = "none";
+
+        canvas.addEventListener(
+          "touchstart",
+          this.onTouchStart,
+          { passive: false }
+        );
+
+        canvas.addEventListener(
+          "touchmove",
+          this.onTouchMove,
+          { passive: false }
+        );
+
+        canvas.addEventListener(
+          "touchend",
+          this.onTouchEnd,
+          { passive: false }
+        );
+
+        canvas.addEventListener(
+          "touchcancel",
+          this.onTouchEnd,
+          { passive: false }
+        );
+      },
+
+      onTouchStart: function (event) {
+        if (event.touches.length !== 1) return;
+
+        event.preventDefault();
+
+        const touch = event.touches[0];
+
+        this.dragging = true;
+        this.lastX = touch.clientX;
+        this.lastY = touch.clientY;
+      },
+
+      onTouchMove: function (event) {
+        if (!this.dragging || event.touches.length !== 1) return;
+
+        event.preventDefault();
+
+        const touch = event.touches[0];
+
+        const dx = touch.clientX - this.lastX;
+        const dy = touch.clientY - this.lastY;
+
+        this.lastX = touch.clientX;
+        this.lastY = touch.clientY;
+
+        this.yaw -= dx * this.data.sensitivity;
+        this.pitch -= dy * this.data.sensitivity;
+
+        this.pitch = Math.max(
+          -this.data.maxPitch,
+          Math.min(this.data.maxPitch, this.pitch)
+        );
+
+        this.el.object3D.rotation.set(
+          THREE.MathUtils.degToRad(this.pitch),
+          THREE.MathUtils.degToRad(this.yaw),
+          0
+        );
+      },
+
+      onTouchEnd: function (event) {
+        if (event) event.preventDefault();
+        this.dragging = false;
+      },
+
+      remove: function () {
+        if (!this.canvas) return;
+
+        this.canvas.removeEventListener("touchstart", this.onTouchStart);
+        this.canvas.removeEventListener("touchmove", this.onTouchMove);
+        this.canvas.removeEventListener("touchend", this.onTouchEnd);
+        this.canvas.removeEventListener("touchcancel", this.onTouchEnd);
+      }
+    });
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
       width: 100%;
       height: 100%;
       margin: 0;
       overflow: hidden;
       overscroll-behavior: none;
+      touch-action: none;
       font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif;
       background: #111;
     }
@@ -29,6 +158,7 @@
 
     a-scene canvas {
       touch-action: none !important;
+      overscroll-behavior: none !important;
     }
 
     .top-bar {
@@ -76,11 +206,6 @@
       pointer-events: auto;
     }
 
-    .back-button:hover,
-    .back-button:focus {
-      background: #eaf2f8;
-    }
-
     .controls {
       position: fixed;
       left: 50%;
@@ -107,20 +232,11 @@
       font-weight: bold;
       cursor: pointer;
       box-shadow: 0 3px 12px rgba(0,0,0,0.3);
-    }
-
-    .control-button:hover,
-    .control-button:focus {
-      background: #eaf2f8;
+      touch-action: manipulation;
     }
 
     #rockButton {
       background: rgba(255,248,220,0.96);
-    }
-
-    #rockButton:hover,
-    #rockButton:focus {
-      background: #fff0b8;
     }
 
     .a-enter-vr-button,
@@ -138,6 +254,7 @@
       justify-content: center;
       padding: 24px;
       background: rgba(0,0,0,0.62);
+      touch-action: manipulation;
     }
 
     .start-card,
@@ -173,11 +290,7 @@
       font-size: 20px;
       font-weight: bold;
       cursor: pointer;
-    }
-
-    .start-button:hover,
-    .start-button:focus {
-      background: #1a5276;
+      touch-action: manipulation;
     }
 
     .error-overlay {
@@ -372,13 +485,19 @@
       rotation="0 -90 0">
     </a-videosphere>
 
-    <a-camera
-      look-controls="
-        mouseEnabled: true;
-        touchEnabled: true;
-        magicWindowTrackingEnabled: true"
-      wasd-controls-enabled="false">
-    </a-camera>
+    <a-entity
+      id="cameraRig"
+      touch-drag-look="sensitivity: 0.16; maxPitch: 80"
+    >
+      <a-camera
+        id="mainCamera"
+        look-controls="
+          mouseEnabled: true;
+          touchEnabled: false;
+          magicWindowTrackingEnabled: true"
+        wasd-controls-enabled="false">
+      </a-camera>
+    </a-entity>
   </a-scene>
 
   <script>
@@ -545,10 +664,7 @@
         video.getAttribute("src") ||
         "";
 
-      console.error(
-        "動画読み込みエラー:",
-        currentSource
-      );
+      console.error("動画読み込みエラー:", currentSource);
 
       errorOverlay.style.display = "flex";
       errorMessage.textContent =
@@ -574,9 +690,7 @@
         isPseudoFullscreen();
 
       fullscreenButton.textContent =
-        active
-          ? "全画面を終了"
-          : "全画面表示";
+        active ? "全画面を終了" : "全画面表示";
     }
 
     function togglePseudoFullscreen(force) {
@@ -645,7 +759,6 @@
       if (isRealFullscreen()) {
         togglePseudoFullscreen(false);
       }
-
       updateFullscreenButton();
     });
 
@@ -653,7 +766,6 @@
       if (isRealFullscreen()) {
         togglePseudoFullscreen(false);
       }
-
       updateFullscreenButton();
     });
 
