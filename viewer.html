@@ -2,184 +2,414 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>河川VR教材 - VR観察</title>
-  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+
+  <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
 
   <style>
     * { box-sizing: border-box; }
 
     html, body {
-      width: 100%; height: 100%; margin: 0; overflow: hidden;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
       font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif;
       background: #111;
     }
 
-    a-scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+    a-scene {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    a-scene canvas {
+      touch-action: none !important;
+    }
 
     .top-bar {
-      position: fixed; top: 16px; left: 16px; right: 16px; z-index: 20;
-      display: flex; align-items: flex-start; justify-content: space-between;
-      gap: 12px; pointer-events: none;
+      position: fixed;
+      top: max(16px, env(safe-area-inset-top));
+      left: max(16px, env(safe-area-inset-left));
+      right: max(16px, env(safe-area-inset-right));
+      z-index: 20;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
     }
 
     .title-box {
-      max-width: min(72vw, 580px); padding: 11px 16px; border-radius: 12px;
-      color: #111; background: rgba(255,255,255,0.92);
-      box-shadow: 0 3px 12px rgba(0,0,0,0.3); text-align: left;
+      max-width: min(68vw, 520px);
+      padding: 11px 16px;
+      border-radius: 12px;
+      color: #111;
+      background: rgba(255,255,255,0.92);
+      box-shadow: 0 3px 12px rgba(0,0,0,0.3);
+      text-align: left;
       pointer-events: auto;
     }
 
-    #pointTitle { margin: 0 0 3px; font-size: clamp(20px, 3vw, 28px); }
-    #pointDescription { margin: 0; font-size: clamp(13px, 1.8vw, 16px); line-height: 1.5; }
+    #pointTitle {
+      margin: 0;
+      font-size: clamp(20px, 3vw, 28px);
+      line-height: 1.3;
+    }
 
     .back-button {
-      display: inline-block; flex-shrink: 0; padding: 12px 16px;
-      border: 2px solid #222; border-radius: 11px;
-      background: rgba(255,255,255,0.94); color: #111; text-decoration: none;
-      font-size: 16px; font-weight: bold; box-shadow: 0 3px 12px rgba(0,0,0,0.3);
+      display: inline-block;
+      flex-shrink: 0;
+      padding: 12px 16px;
+      border: 2px solid #222;
+      border-radius: 11px;
+      background: rgba(255,255,255,0.94);
+      color: #111;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: bold;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.3);
       pointer-events: auto;
     }
-    .back-button:hover, .back-button:focus { background: #eaf2f8; }
+
+    .back-button:hover,
+    .back-button:focus {
+      background: #eaf2f8;
+    }
 
     .controls {
-      position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom));
-      transform: translateX(-50%); z-index: 20;
-      display: flex; justify-content: center; align-items: center; gap: 12px;
-      width: min(96%, 900px); pointer-events: auto;
+      position: fixed;
+      left: 50%;
+      bottom: max(18px, env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      z-index: 20;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      width: min(96%, 920px);
+      pointer-events: auto;
     }
 
     .control-button {
-      min-width: 130px; min-height: 52px; padding: 12px 18px;
-      border: 2px solid #222; border-radius: 12px;
-      background: rgba(255,255,255,0.95); color: #111;
-      font-size: 17px; font-weight: bold; cursor: pointer;
+      min-width: 128px;
+      min-height: 52px;
+      padding: 12px 18px;
+      border: 2px solid #222;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.95);
+      color: #111;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
       box-shadow: 0 3px 12px rgba(0,0,0,0.3);
     }
-    .control-button:hover, .control-button:focus { background: #eaf2f8; }
-    #rockButton { background: rgba(255,248,220,0.96); }
-    #rockButton:hover, #rockButton:focus { background: #fff0b8; }
 
-    .a-enter-vr-button, .a-enter-ar-button { display: none !important; }
+    .control-button:hover,
+    .control-button:focus {
+      background: #eaf2f8;
+    }
 
-    .start-overlay, .error-overlay {
-      position: fixed; inset: 0; z-index: 30; display: flex;
-      align-items: center; justify-content: center; padding: 24px;
+    #rockButton {
+      background: rgba(255,248,220,0.96);
+    }
+
+    #rockButton:hover,
+    #rockButton:focus {
+      background: #fff0b8;
+    }
+
+    .a-enter-vr-button,
+    .a-enter-ar-button {
+      display: none !important;
+    }
+
+    .start-overlay,
+    .error-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
       background: rgba(0,0,0,0.62);
     }
 
-    .start-card, .error-card {
-      width: min(92vw, 520px); padding: 28px; border-radius: 18px;
-      background: white; color: #111; text-align: center;
+    .start-card,
+    .error-card {
+      width: min(92vw, 520px);
+      padding: 28px;
+      border-radius: 18px;
+      background: white;
+      color: #111;
+      text-align: center;
       box-shadow: 0 10px 35px rgba(0,0,0,0.45);
     }
 
-    .start-card h2, .error-card h2 { margin: 0 0 12px; font-size: 26px; }
-    .start-card p, .error-card p { margin: 0 0 20px; line-height: 1.7; font-size: 16px; }
+    .start-card h2,
+    .error-card h2 {
+      margin: 0 0 12px;
+      font-size: 26px;
+    }
+
+    .start-card p,
+    .error-card p {
+      margin: 0 0 20px;
+      line-height: 1.7;
+      font-size: 16px;
+    }
 
     .start-button {
-      border: 0; border-radius: 12px; padding: 14px 28px;
-      background: #2471a3; color: white; font-size: 20px;
-      font-weight: bold; cursor: pointer;
-    }
-    .start-button:hover, .start-button:focus { background: #1a5276; }
-    .error-overlay { display: none; }
-
-    :fullscreen .top-bar { display: none; }
-    :fullscreen #rockButton { display: none !important; }
-    :fullscreen .controls {
-      width: min(94%, 650px); bottom: max(22px, env(safe-area-inset-bottom));
-      gap: 16px; flex-wrap: nowrap;
-    }
-    :fullscreen .control-button {
-      flex: 1; min-width: 0; min-height: 58px; padding: 14px 16px; font-size: 18px;
+      border: 0;
+      border-radius: 12px;
+      padding: 14px 28px;
+      background: #2471a3;
+      color: white;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
     }
 
-    :-webkit-full-screen .top-bar { display: none; }
-    :-webkit-full-screen #rockButton { display: none !important; }
-    :-webkit-full-screen .controls {
-      width: min(94%, 650px); bottom: max(22px, env(safe-area-inset-bottom));
-      gap: 16px; flex-wrap: nowrap;
+    .start-button:hover,
+    .start-button:focus {
+      background: #1a5276;
     }
-    :-webkit-full-screen .control-button {
-      flex: 1; min-width: 0; min-height: 58px; padding: 14px 16px; font-size: 18px;
+
+    .error-overlay {
+      display: none;
+    }
+
+    :fullscreen .top-bar,
+    :-webkit-full-screen .top-bar,
+    body.pseudo-fullscreen .top-bar {
+      display: none;
+    }
+
+    :fullscreen #rockButton,
+    :-webkit-full-screen #rockButton,
+    body.pseudo-fullscreen #rockButton {
+      display: none !important;
+    }
+
+    :fullscreen .controls,
+    :-webkit-full-screen .controls,
+    body.pseudo-fullscreen .controls {
+      width: min(94%, 650px);
+      bottom: max(22px, env(safe-area-inset-bottom));
+      gap: 16px;
+      flex-wrap: nowrap;
+    }
+
+    :fullscreen .control-button,
+    :-webkit-full-screen .control-button,
+    body.pseudo-fullscreen .control-button {
+      flex: 1;
+      min-width: 0;
+      min-height: 60px;
+      padding: 14px 16px;
+      font-size: 18px;
     }
 
     @media (max-width: 900px) {
-      .controls { width: 96%; gap: 8px; }
+      .controls {
+        width: 96%;
+        gap: 8px;
+      }
+
       .control-button {
-        min-width: 105px; min-height: 50px; padding: 10px 12px; font-size: 15px;
+        min-width: 105px;
+        min-height: 52px;
+        padding: 10px 12px;
+        font-size: 15px;
       }
-      :fullscreen .controls, :-webkit-full-screen .controls {
-        width: 94%; max-width: 620px; gap: 10px;
+
+      :fullscreen .controls,
+      :-webkit-full-screen .controls,
+      body.pseudo-fullscreen .controls {
+        width: 94%;
+        max-width: 620px;
+        gap: 10px;
       }
-      :fullscreen .control-button, :-webkit-full-screen .control-button {
-        min-height: 58px; font-size: 17px;
+
+      :fullscreen .control-button,
+      :-webkit-full-screen .control-button,
+      body.pseudo-fullscreen .control-button {
+        min-height: 60px;
+        font-size: 17px;
       }
     }
 
     @media (max-width: 650px) {
-      .top-bar { top: 10px; left: 10px; right: 10px; }
-      .title-box { max-width: 60vw; padding: 9px 11px; }
-      #pointDescription { display: none; }
-      .back-button { padding: 10px 12px; font-size: 14px; }
-      .controls { flex-wrap: wrap; }
-      .control-button { min-width: 44%; }
-      :fullscreen .controls, :-webkit-full-screen .controls { flex-wrap: nowrap; }
-      :fullscreen .control-button, :-webkit-full-screen .control-button {
-        min-width: 0; font-size: 15px; padding: 10px 6px;
+      .top-bar {
+        top: max(10px, env(safe-area-inset-top));
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+      }
+
+      .title-box {
+        max-width: 58vw;
+        padding: 9px 11px;
+      }
+
+      #pointTitle {
+        font-size: 18px;
+      }
+
+      .back-button {
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+
+      .controls {
+        flex-wrap: wrap;
+      }
+
+      .control-button {
+        min-width: 44%;
+      }
+
+      :fullscreen .controls,
+      :-webkit-full-screen .controls,
+      body.pseudo-fullscreen .controls {
+        flex-wrap: nowrap;
+      }
+
+      :fullscreen .control-button,
+      :-webkit-full-screen .control-button,
+      body.pseudo-fullscreen .control-button {
+        min-width: 0;
+        font-size: 14px;
+        padding: 10px 5px;
       }
     }
   </style>
 </head>
+
 <body>
+
   <div class="top-bar">
     <div class="title-box">
       <h1 id="pointTitle">地点</h1>
-      <p id="pointDescription">360°動画を読み込んでいます。</p>
     </div>
-    <a href="index.html" class="back-button">地点選択に戻る</a>
+
+    <a href="index.html" class="back-button">
+      地点選択に戻る
+    </a>
   </div>
 
   <div class="controls">
-    <button class="control-button" id="playButton" type="button">▶ 再生</button>
-    <button class="control-button" id="pauseButton" type="button">⏸ 一時停止</button>
-    <button class="control-button" id="rockButton" type="button">足元の岩石を観察する</button>
-    <button class="control-button" id="fullscreenButton" type="button">全画面表示</button>
+    <button class="control-button" id="playButton" type="button">
+      ▶ 再生
+    </button>
+
+    <button class="control-button" id="pauseButton" type="button">
+      ⏸ 一時停止
+    </button>
+
+    <button class="control-button" id="rockButton" type="button">
+      足元の岩石を観察する
+    </button>
+
+    <button class="control-button" id="fullscreenButton" type="button">
+      全画面表示
+    </button>
   </div>
 
   <div class="start-overlay" id="startOverlay">
     <div class="start-card">
       <h2 id="startTitle">VR動画を観察する</h2>
-      <p>動画の中をドラッグすると、周囲を360°見渡せます。<br>川幅・流れ・河原の石などに注目してみよう。</p>
-      <button class="start-button" id="startButton" type="button">動画を再生</button>
+
+      <p>
+        画面を指やマウスで動かすと、周囲を360°見渡せます。<br>
+        対応端末では、端末自体を動かして視点を変えることもできます。
+      </p>
+
+      <button class="start-button" id="startButton" type="button">
+        動画を再生
+      </button>
     </div>
   </div>
 
   <div class="error-overlay" id="errorOverlay">
     <div class="error-card">
       <h2>動画を読み込めませんでした</h2>
-      <p id="errorMessage">動画ファイル名や保存場所を確認してください。</p>
-      <a href="index.html" class="back-button">地点選択に戻る</a>
+
+      <p id="errorMessage">
+        動画ファイル名や保存場所を確認してください。
+      </p>
+
+      <a href="index.html" class="back-button">
+        地点選択に戻る
+      </a>
     </div>
   </div>
 
-  <a-scene embedded vr-mode-ui="enabled: false" loading-screen="enabled: false" device-orientation-permission-ui="enabled: false">
+  <a-scene
+    embedded
+    vr-mode-ui="enabled: false"
+    loading-screen="enabled: false"
+    device-orientation-permission-ui="enabled: true"
+  >
     <a-assets timeout="20000">
-      <video id="vrVideo" playsinline webkit-playsinline crossorigin="anonymous" preload="metadata" loop></video>
+      <video
+        id="vrVideo"
+        playsinline
+        webkit-playsinline
+        crossorigin="anonymous"
+        preload="metadata"
+        loop>
+      </video>
     </a-assets>
-    <a-videosphere id="videoSphere" src="#vrVideo" rotation="0 -90 0"></a-videosphere>
-    <a-camera look-controls="magicWindowTrackingEnabled: false" wasd-controls-enabled="false"></a-camera>
+
+    <a-videosphere
+      id="videoSphere"
+      src="#vrVideo"
+      rotation="0 -90 0">
+    </a-videosphere>
+
+    <a-camera
+      look-controls="
+        mouseEnabled: true;
+        touchEnabled: true;
+        magicWindowTrackingEnabled: true"
+      wasd-controls-enabled="false">
+    </a-camera>
   </a-scene>
 
   <script>
     const pointData = {
-      1: { title: "地点1　御嶽渓谷", description: "川の流れや河原の様子を観察しよう。", mainVideo: "videos/point1.mp4", rockVideo: "videos/point1_rock.mp4" },
-      2: { title: "地点2　秋川渓谷", description: "川の流れや河原の様子を観察しよう。", mainVideo: "videos/point2.mp4", rockVideo: "videos/point2_rock.mp4" },
-      3: { title: "地点3　釜の淵公園", description: "川の流れや河原の様子を観察しよう。", mainVideo: "videos/point3.mp4", rockVideo: "videos/point3_rock.mp4" },
-      4: { title: "地点4　拝島", description: "川の様子を観察しよう。", mainVideo: "videos/point4.mp4" },
-      5: { title: "地点5　丸子橋", description: "川の様子を観察しよう。", mainVideo: "videos/point5.mp4" },
-      6: { title: "地点6　多摩川スカイブリッジ", description: "河口付近の川の様子を観察しよう。", mainVideo: "videos/point6.mp4" }
+      1: {
+        title: "地点1　御嶽渓谷",
+        mainVideo: "videos/point1.mp4",
+        rockVideo: "videos/point1_rock.mp4"
+      },
+      2: {
+        title: "地点2　秋川渓谷",
+        mainVideo: "videos/point2.mp4",
+        rockVideo: "videos/point2_rock.mp4"
+      },
+      3: {
+        title: "地点3　釜の淵公園",
+        mainVideo: "videos/point3.mp4",
+        rockVideo: "videos/point3_rock.mp4"
+      },
+      4: {
+        title: "地点4　拝島",
+        mainVideo: "videos/point4.mp4"
+      },
+      5: {
+        title: "地点5　丸子橋",
+        mainVideo: "videos/point5.mp4"
+      },
+      6: {
+        title: "地点6　多摩川スカイブリッジ",
+        mainVideo: "videos/point6.mp4"
+      }
     };
 
     const params = new URLSearchParams(window.location.search);
@@ -188,7 +418,6 @@
 
     const video = document.getElementById("vrVideo");
     const pointTitle = document.getElementById("pointTitle");
-    const pointDescription = document.getElementById("pointDescription");
     const startOverlay = document.getElementById("startOverlay");
     const startButton = document.getElementById("startButton");
     const startTitle = document.getElementById("startTitle");
@@ -204,42 +433,84 @@
     if (!selected) {
       startOverlay.style.display = "none";
       errorOverlay.style.display = "flex";
-      errorMessage.textContent = "地点が正しく指定されていません。地点選択画面から選び直してください。";
+      errorMessage.textContent =
+        "地点が正しく指定されていません。地点選択画面から選び直してください。";
     } else {
       pointTitle.textContent = selected.title;
-      pointDescription.textContent = selected.description;
       startTitle.textContent = selected.title + "を観察する";
       document.title = "河川VR教材 - " + selected.title;
+
       video.src = selected.mainVideo;
       video.load();
-      if (!selected.rockVideo) rockButton.style.display = "none";
+
+      if (!selected.rockVideo) {
+        rockButton.style.display = "none";
+      }
+    }
+
+    async function requestOrientationPermissionIfNeeded() {
+      try {
+        const requests = [];
+
+        if (
+          typeof DeviceOrientationEvent !== "undefined" &&
+          typeof DeviceOrientationEvent.requestPermission === "function"
+        ) {
+          requests.push(DeviceOrientationEvent.requestPermission());
+        }
+
+        if (
+          typeof DeviceMotionEvent !== "undefined" &&
+          typeof DeviceMotionEvent.requestPermission === "function"
+        ) {
+          requests.push(DeviceMotionEvent.requestPermission());
+        }
+
+        if (requests.length > 0) {
+          await Promise.allSettled(requests);
+        }
+      } catch (error) {
+        console.log(
+          "端末方向センサーの許可を取得できませんでした。",
+          error
+        );
+      }
     }
 
     async function startVideo() {
       if (!selected) return;
+
+      await requestOrientationPermissionIfNeeded();
+
       try {
         await video.play();
         startOverlay.style.display = "none";
       } catch (error) {
         console.error(error);
         errorOverlay.style.display = "flex";
-        errorMessage.textContent = "動画を再生できませんでした。動画ファイル名・保存場所・形式を確認してください。";
+        errorMessage.textContent =
+          "動画を再生できませんでした。動画ファイル名・保存場所・形式を確認してください。";
       }
     }
+
     startButton.addEventListener("click", startVideo);
 
     playButton.addEventListener("click", async () => {
       if (!selected) return;
+
       try {
         await video.play();
       } catch (error) {
         console.error(error);
         errorOverlay.style.display = "flex";
-        errorMessage.textContent = "動画を再生できませんでした。";
+        errorMessage.textContent =
+          "動画を再生できませんでした。";
       }
     });
 
-    pauseButton.addEventListener("click", () => video.pause());
+    pauseButton.addEventListener("click", () => {
+      video.pause();
+    });
 
     rockButton.addEventListener("click", async () => {
       if (!selected || !selected.rockVideo) return;
@@ -248,12 +519,10 @@
 
       if (showingRock) {
         video.src = selected.mainVideo;
-        pointDescription.textContent = selected.description;
         rockButton.textContent = "足元の岩石を観察する";
         showingRock = false;
       } else {
         video.src = selected.rockVideo;
-        pointDescription.textContent = "足元の岩石の大きさや形に注目して観察しよう。";
         rockButton.textContent = "地点全体の様子に戻る";
         showingRock = true;
       }
@@ -265,44 +534,130 @@
       } catch (error) {
         console.error(error);
         errorOverlay.style.display = "flex";
-        errorMessage.textContent = "切り替えた動画を再生できませんでした。動画ファイル名と保存場所を確認してください。";
+        errorMessage.textContent =
+          "切り替えた動画を再生できませんでした。動画ファイル名と保存場所を確認してください。";
       }
     });
 
     video.addEventListener("error", () => {
-      console.error("動画読み込みエラー:", video.currentSrc || video.getAttribute("src"));
+      const currentSource =
+        video.currentSrc ||
+        video.getAttribute("src") ||
+        "";
+
+      console.error(
+        "動画読み込みエラー:",
+        currentSource
+      );
+
       errorOverlay.style.display = "flex";
-      errorMessage.textContent = "動画ファイルを読み込めませんでした。videosフォルダ内のファイル名と保存場所を確認してください。";
+      errorMessage.textContent =
+        "動画ファイルを読み込めませんでした。videosフォルダ内のファイル名と保存場所を確認してください。";
     });
 
+    function isRealFullscreen() {
+      return Boolean(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement
+      );
+    }
+
+    function isPseudoFullscreen() {
+      return document.body.classList.contains(
+        "pseudo-fullscreen"
+      );
+    }
+
+    function updateFullscreenButton() {
+      const active =
+        isRealFullscreen() ||
+        isPseudoFullscreen();
+
+      fullscreenButton.textContent =
+        active
+          ? "全画面を終了"
+          : "全画面表示";
+    }
+
+    function togglePseudoFullscreen(force) {
+      if (typeof force === "boolean") {
+        document.body.classList.toggle(
+          "pseudo-fullscreen",
+          force
+        );
+      } else {
+        document.body.classList.toggle(
+          "pseudo-fullscreen"
+        );
+      }
+
+      updateFullscreenButton();
+    }
+
     fullscreenButton.addEventListener("click", async () => {
-      const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
-      try {
-        if (!isFullscreen) {
-          if (document.documentElement.requestFullscreen) {
-            await document.documentElement.requestFullscreen();
-          } else if (document.documentElement.webkitRequestFullscreen) {
-            document.documentElement.webkitRequestFullscreen();
-          }
-        } else {
+      if (isPseudoFullscreen()) {
+        togglePseudoFullscreen(false);
+        return;
+      }
+
+      if (isRealFullscreen()) {
+        try {
           if (document.exitFullscreen) {
             await document.exitFullscreen();
           } else if (document.webkitExitFullscreen) {
             document.webkitExitFullscreen();
           }
+        } catch (error) {
+          console.error("全画面終了エラー:", error);
         }
+        return;
+      }
+
+      try {
+        if (
+          document.fullscreenEnabled &&
+          document.documentElement.requestFullscreen
+        ) {
+          await document.documentElement.requestFullscreen();
+          return;
+        }
+
+        if (
+          document.documentElement.webkitRequestFullscreen
+        ) {
+          document.documentElement.webkitRequestFullscreen();
+          return;
+        }
+
+        togglePseudoFullscreen(true);
+
       } catch (error) {
-        console.error("全画面表示エラー:", error);
+        console.log(
+          "真の全画面表示が利用できないため、擬似全画面に切り替えます。",
+          error
+        );
+
+        togglePseudoFullscreen(true);
       }
     });
 
-    function updateFullscreenButton() {
-      const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
-      fullscreenButton.textContent = isFullscreen ? "全画面を終了" : "全画面表示";
-    }
+    document.addEventListener("fullscreenchange", () => {
+      if (isRealFullscreen()) {
+        togglePseudoFullscreen(false);
+      }
 
-    document.addEventListener("fullscreenchange", updateFullscreenButton);
-    document.addEventListener("webkitfullscreenchange", updateFullscreenButton);
+      updateFullscreenButton();
+    });
+
+    document.addEventListener("webkitfullscreenchange", () => {
+      if (isRealFullscreen()) {
+        togglePseudoFullscreen(false);
+      }
+
+      updateFullscreenButton();
+    });
+
+    updateFullscreenButton();
   </script>
 </body>
 </html>
